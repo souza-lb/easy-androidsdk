@@ -123,9 +123,13 @@ sed -i \
 
 # Inicia o emulador com otimizações de desempenho
 emulator -avd meu-avd \
--no-boot-anim \      # Desativa animação de boot (início mais rápido)
--gpu host \          # Usa aceleração de GPU da máquina hospedeira
--qemu -enable-kvm    # Habilita virtualização KVM (requer suporte de hardware)
+-no-boot-anim \      
+-gpu host \          
+-qemu -enable-kvm    
+
+# Desativa animação de boot (início mais rápido)
+# Usa aceleração de GPU da máquina hospedeira
+# Habilita virtualização KVM (requer suporte de hardware)
 ```
 
 ### Opções de Configuração:
