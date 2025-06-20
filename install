@@ -1,0 +1,308 @@
+#!/bin/bash
+
+# Instalador Android SDK - Configuração completa do ambiente Android
+
+# Autor: Leonardo Bruno
+# Contato: souzalb@proton.me
+# Versão: 1.0
+# Data: 20/06/2025
+
+# Variáveis globais
+SDK_DOWNLOAD_URL="https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip"
+SDK_ROOT="$HOME/android-sdk"
+SDK_TEMP_DIR=$(mktemp -d /tmp/androidsdk-XXXXX)
+SDK_ZIP_FILE="${SDK_TEMP_DIR}/${SDK_DOWNLOAD_URL##*/}"
+BASHRC_FILE="$HOME/.bashrc"
+
+# Componentes para instalação
+COMPONENTS=(
+    "platform-tools"
+    "platforms;android-35"
+    "build-tools;34.0.0"
+    "build-tools;35.0.0"
+    "cmake;3.22.1"
+    "ndk;26.1.10909125"
+    "emulator"
+    "system-images;android-30;google_apis;x86_64"
+)
+
+# Função para limpeza de arquivos temporários
+cleanup() {
+    if [[ -d "$SDK_TEMP_DIR" ]]; then
+        rm -rf "$SDK_TEMP_DIR"
+        echo "Limpeza de arquivos temporários realizada!"
+    fi
+}
+
+# Registrar cleanup para execução ao sair
+trap cleanup EXIT
+
+# Função para mostrar barra de progresso com nome do componente
+show_progress() {
+    local current=$1
+    local total=$2
+    local component=$3
+    local bar_size=40
+    local percent=$((current * 100 / total))
+    local completed=$((current * bar_size / total))
+    local remaining=$((bar_size - completed))
+    
+    # Formata o nome do componente para caber em 30 caracteres
+    local comp_display
+    if [ ${#component} -gt 30 ]; then
+        comp_display="...${component: -27}"
+    else
+        comp_display="$component"
+    fi
+    
+    printf "\r["
+    printf "%${completed}s" | tr ' ' '='
+    printf "%${remaining}s" | tr ' ' ' '
+    printf "] %3d%% (%2d/%2d) %-30s" "$percent" "$current" "$total" "$comp_display"
+}
+
+# Mensagem inicial
+echo ""
+echo "--------------------------------------------"
+echo "  Instalação Android SDK - Versão 1.0        "
+echo "--------------------------------------------"
+echo ""
+echo "ATENÇÃO: Todos os arquivos temporários serão"
+echo "         armazenados em: $SDK_TEMP_DIR"
+echo ""
+echo "Progresso:"
+echo "1 - Verificar dependências"
+echo "2 - Criar estrutura de pastas"
+echo "3 - Baixar Command Line Tools"
+echo "4 - Extrair e instalar SDK"
+echo "5 - Configurar variáveis de ambiente"
+echo "6 - Aceitar licenças"
+echo "7 - Instalar componentes Android"
+echo ""
+
+# Verifica dependências do sistema
+check_dependencies() {
+    echo -n "[1/7] Verificando dependências..."
+    local missing=()
+    
+    if ! command -v wget &> /dev/null; then
+        missing+=("wget")
+    fi
+    
+    if ! command -v unzip &> /dev/null; then
+        missing+=("unzip")
+    fi
+    
+    if ! command -v java &> /dev/null; then
+        missing+=("java (OpenJDK)")
+    fi
+    
+    if [ ${#missing[@]} -gt 0 ]; then
+        echo " Erro!"
+        echo "Dependências ausentes:"
+        for pkg in "${missing[@]}"; do
+            echo "  - $pkg"
+        done
+        echo "Instale os pacotes antes de continuar."
+        exit 1
+    fi
+    
+    echo " OK"
+    return 0
+}
+
+# Verifica instalação existente
+check_existing_installation() {
+    echo -n "[2/7] Verificando instalação existente..."
+    if [[ -d "$SDK_ROOT" && -n $(ls -A "$SDK_ROOT" 2>/dev/null) ]]; then
+        echo " Aviso!"
+        echo "Foi detectada uma instalação existente em: $SDK_ROOT"
+        read -p "Deseja sobrescrever? [s/N]: " response < /dev/tty
+        if [[ ! "$response" =~ ^[Ss]$ ]]; then
+            echo "Instalação cancelada."
+            exit 0
+        fi
+        echo "Sobrescrevendo instalação existente..."
+        rm -rf "${SDK_ROOT:?}/*"
+    else
+        echo " OK"
+    fi
+    return 0
+}
+
+# Cria estrutura de diretórios
+create_directories() {
+    echo -n "[3/7] Criando estrutura de pastas..."
+    
+    if ! mkdir -p "$SDK_ROOT/cmdline-tools/latest" 2>/dev/null; then
+        echo " Erro!"
+        echo "Falha ao criar diretório $SDK_ROOT/cmdline-tools/latest"
+        exit 1
+    fi
+    
+    echo " OK"
+    return 0
+}
+
+# Baixa o Command Line Tools para diretório temporário
+download_sdk() {
+    echo -n "[4/7] Baixando Command Line Tools..."
+    
+    if ! wget -q --show-progress -nc -O "$SDK_ZIP_FILE" "$SDK_DOWNLOAD_URL" 2>&1; then
+        echo " Erro!"
+        echo "Falha no download do Android SDK!"
+        exit 1
+    fi
+    
+    echo " OK"
+    return 0
+}
+
+# Extrai e instala o SDK a partir do diretório temporário
+install_sdk() {
+    echo -n "[5/7] Instalando Command Line Tools..."
+    
+    if ! unzip -q "$SDK_ZIP_FILE" -d "$SDK_TEMP_DIR" 2>/dev/null; then
+        echo " Erro!"
+        echo "Falha ao extrair o arquivo $SDK_ZIP_FILE!"
+        exit 1
+    fi
+    
+    if ! mv "$SDK_TEMP_DIR"/cmdline-tools/* "$SDK_ROOT/cmdline-tools/latest" 2>/dev/null; then
+        echo " Erro!"
+        echo "Falha ao mover arquivos para $SDK_ROOT/cmdline-tools/latest"
+        exit 1
+    fi
+    
+    echo " OK"
+    return 0
+}
+
+# Configura variáveis de ambiente
+configure_environment() {
+    echo -n "[6/7] Configurando variáveis de ambiente..."
+    
+    local marker="# android sdk auto config"
+    
+    # Configura o .bashrc se não estiver configurado
+    if ! grep -q "$marker" "$BASHRC_FILE"; then
+        {
+            echo ""
+            echo "$marker"
+            echo "export ANDROID_SDK_ROOT=\"\$HOME/android-sdk\""
+            echo "export PATH=\"\$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:\$PATH\""
+            echo "export PATH=\"\$ANDROID_SDK_ROOT/platform-tools:\$PATH\""
+            echo "export PATH=\"\$ANDROID_SDK_ROOT/emulator:\$PATH\""
+        } >> "$BASHRC_FILE"
+    fi
+    
+    # Configura o ambiente atual do script
+    export ANDROID_SDK_ROOT="$SDK_ROOT"
+    export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
+    export PATH="$ANDROID_SDK_ROOT/platform-tools:$PATH"
+    export PATH="$ANDROID_SDK_ROOT/emulator:$PATH"
+    
+    echo " OK"
+    return 0
+}
+
+# Aceita licenças
+accept_licenses() {
+    echo -n "[7/7] Aceitando licenças do Android SDK..."
+    
+    mkdir -p "$HOME/.android"
+    touch "$HOME/.android/repositories.cfg"
+    
+    # Tenta 3 vezes com intervalos
+    for i in {1..3}; do
+        if yes 2>/dev/null | sdkmanager --licenses > /dev/null 2>&1; then
+            echo " OK"
+            return 0
+        fi
+        sleep 2
+    done
+    
+    echo " Erro!"
+    echo "Falha ao aceitar as licenças após 3 tentativas!"
+    echo "Tente executar manualmente: sdkmanager --licenses"
+    exit 1
+}
+
+# Instala componentes do Android
+install_components() {
+    echo ""
+    echo "--------------------------------------------"
+    echo " Instalando componentes Android SDK          "
+    echo "--------------------------------------------"
+    echo "Esta etapa pode levar vários minutos..."
+    echo "Por favor, aguarde..."
+    echo ""
+    
+    local total=${#COMPONENTS[@]}
+    local current=1
+    
+    # Cabeçalho informativo
+    printf "%-40s %s\n" "Componente" "Progresso"
+    echo "------------------------------------------------------------"
+    
+    for component in "${COMPONENTS[@]}"; do
+        # Mostra o nome completo do componente e a barra na linha seguinte
+        printf "%-40s " "$component"
+        show_progress $current $total "$component"
+        
+        # Executa a instalação
+        if ! sdkmanager "$component" > /dev/null 2>&1; then
+            # Mostra mensagem de erro
+            printf "\n\nAviso: Falha ao instalar %s, tentando novamente...\n" "$component"
+            sleep 2
+            
+            if ! sdkmanager "$component" > /dev/null 2>&1; then
+                printf "\nErro: Falha persistente ao instalar %s\n" "$component"
+                exit 1
+            fi
+            # Atualiza a barra após tentativa bem sucedida
+            show_progress $current $total "$component"
+        fi
+        
+        ((current++))
+    done
+    
+    # Completa a barra de progresso
+    printf "\r[========================================] 100%% (%d/%d) Concluído\n" "$total" "$total"
+    echo ""
+    echo "Todos os componentes foram instalados com sucesso."
+    return 0
+}
+
+# Função principal
+main() {
+    check_dependencies
+    check_existing_installation
+    create_directories
+    download_sdk
+    install_sdk
+    configure_environment
+    accept_licenses
+    install_components
+    
+    echo ""
+    echo "--------------------------------------------"
+    echo "  Instalação concluída com sucesso!          "
+    echo "--------------------------------------------"
+    echo ""
+    echo "Próximos passos:"
+    echo "1. Recarregue o terminal ou execute:"
+    echo "   source ~/.bashrc"
+    echo "2. Verifique a instalação:"
+    echo "   sdkmanager --list"
+    echo "3. Crie um AVD:"
+    echo "   avdmanager create avd -n Meu_Dispositivo -k 'system-images;android-30;google_apis;x86_64'"
+    echo "4. Inicie o emulador:"
+    echo "   emulator -avd Meu_Dispositivo &"
+    echo ""
+    echo "Documentação: https://developer.android.com/studio/command-line"
+    echo ""
+}
+
+# Executa instalação
+main
