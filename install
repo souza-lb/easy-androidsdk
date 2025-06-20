@@ -168,7 +168,7 @@ install_sdk() {
         exit 1
     fi
     
-    if ! mv "$SDK_TEMP_DIR"/cmdline-tools/* "$SDK_ROOT/cmdline-tools/latest" 2>/dev/null; then
+    if ! cp -r "$SDK_TEMP_DIR"/cmdline-tools/* "$SDK_ROOT/cmdline-tools/latest" 2>/dev/null; then
         echo " Erro!"
         echo "Falha ao mover arquivos para $SDK_ROOT/cmdline-tools/latest"
         exit 1
