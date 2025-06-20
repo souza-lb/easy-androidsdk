@@ -115,17 +115,18 @@ avdmanager create avd \
 -c 512M \
 --force
 
-# Habilita teclado físico e botões de navegação
+# habilita os botões de navegação e teclado
 sed -i \
 -e 's/^hw\.keyboard\s*=\s*no.*/hw.keyboard = yes/' \
--e 's/^hw\.mainKeys\s*=\s*no.*/hw.mainKeys = no/' \
 "$HOME/.android/avd/meu-avd.avd/config.ini"
 
 # Inicia o emulador com otimizações de desempenho
-emulator -avd meu-avd \
--no-boot-anim \      
--gpu host \          
--qemu -enable-kvm    
+avdmanager create avd \
+-n "meu-avd" \
+-k "system-images;android-30;google_apis;x86_64" \
+-d "Nexus One" \
+-c 512M \
+--force
 
 # Desativa animação de boot (início mais rápido)
 # Usa aceleração de GPU da máquina hospedeira
