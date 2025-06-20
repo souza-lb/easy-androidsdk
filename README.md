@@ -121,12 +121,11 @@ sed -i \
 "$HOME/.android/avd/meu-avd.avd/config.ini"
 
 # Inicia o emulador com otimizações de desempenho
-avdmanager create avd \
--n "meu-avd" \
--k "system-images;android-30;google_apis;x86_64" \
--d "Nexus One" \
--c 512M \
---force
+emulator -avd \
+meu-avd \
+-no-boot-anim \
+-gpu host \
+-qemu -enable-kvm
 
 # Desativa animação de boot (início mais rápido)
 # Usa aceleração de GPU da máquina hospedeira
