@@ -1,0 +1,145 @@
+#!/bin/bash
+
+# Desinstalador Android SDK - Remove completamente a instalação do ambiente Android
+
+# Autor: Leonardo Bruno
+# Contato: souzalb@proton.me
+# Versão: 1.0
+# Data: 20/06/2025
+
+# Variáveis globais
+SDK_ROOT="$HOME/android-sdk"
+BASHRC_FILE="$HOME/.bashrc"
+MARKER="# android sdk auto config"
+REPOSITORIES_FILE="$HOME/.android/repositories.cfg"
+
+# Mensagem inicial
+echo ""
+echo "--------------------------------------------"
+echo "  Desinstalação Android SDK - Versão 1.0     "
+echo "--------------------------------------------"
+echo ""
+echo "1 - Verificar instalação"
+echo "2 - Remover entradas do bashrc"
+echo "3 - Remover arquivos do SDK"
+echo "4 - Finalizar desinstalação"
+echo ""
+
+# Verifica se instalação existe
+check_installation_exists() {
+    if [ ! -d "$SDK_ROOT" ]; then
+        echo "Erro: O Android SDK não está instalado."
+        echo "Pasta não encontrada: $SDK_ROOT"
+        echo ""
+        echo "Nenhuma ação será realizada."
+        exit 0
+    fi
+    echo "Instalação localizada: $SDK_ROOT"
+    return 0
+}
+
+# Confirmação do usuário
+confirm_uninstall() {
+    read -p "Deseja realmente desinstalar o Android SDK? [s/N]: " confirm < /dev/tty
+    if [[ ! "$confirm" =~ ^[Ss]$ ]]; then
+        echo ""
+        echo "Desinstalação cancelada pelo usuário."
+        echo "Nenhuma alteração foi realizada."
+        exit 0
+    fi
+}
+
+# Remove configurações do bashrc
+remove_bashrc_entries() {
+    echo "Removendo configurações do .bashrc..."
+    
+    if grep -q "$MARKER" "$BASHRC_FILE"; then
+        # Cria backup antes de modificar
+        cp "$BASHRC_FILE" "${BASHRC_FILE}.backup-androidsdk"
+        
+        # Remove as linhas relacionadas ao Android SDK
+        sed -i "/$MARKER/d" "$BASHRC_FILE"
+        sed -i '/export ANDROID_SDK_ROOT="\$HOME\/android-sdk"/d' "$BASHRC_FILE"
+        sed -i '/export PATH="\$ANDROID_SDK_ROOT\/cmdline-tools\/latest\/bin:\$PATH"/d' "$BASHRC_FILE"
+        sed -i '/export PATH="\$ANDROID_SDK_ROOT\/platform-tools:\$PATH"/d' "$BASHRC_FILE"
+        sed -i '/export PATH="\$ANDROID_SDK_ROOT\/emulator:\$PATH"/d' "$BASHRC_FILE"
+        
+        echo "Configurações removidas do .bashrc!"
+        echo "Backup salvo em: ${BASHRC_FILE}.backup-androidsdk"
+    else
+        echo "Nenhuma configuração do Android SDK encontrada no .bashrc"
+    fi
+    return 0
+}
+
+# Função para calcular tamanho da pasta
+get_folder_size() {
+    if [ -d "${1:-}" ]; then
+        du -sh "$1" | cut -f1
+    else
+        echo "0K"
+    fi
+}
+
+# Remove arquivos do SDK
+remove_sdk_files() {
+    echo "Verificando arquivos do SDK..."
+    
+    if [ -d "$SDK_ROOT" ]; then
+        folder_size=$(get_folder_size "$SDK_ROOT")
+        echo "Tamanho da pasta do SDK: $folder_size"
+        echo "Atenção! Esta operação é irreversível!"
+        
+        read -p "Deseja remover todos os arquivos do Android SDK? [s/N]: " confirm_sdk < /dev/tty
+        if [[ "$confirm_sdk" =~ ^[Ss]$ ]]; then
+            read -p "Confirme digitando 'remover': " double_confirm < /dev/tty
+            if [ "$double_confirm" == "remover" ]; then
+                echo "Removendo arquivos do SDK..."
+                rm -rf "$SDK_ROOT"
+                echo "Pasta do SDK removida: $SDK_ROOT"
+            else
+                echo "Confirmação inválida. Os arquivos do SDK não foram removidos."
+            fi
+        else
+            echo "Pasta do SDK mantida: $SDK_ROOT"
+        fi
+    else
+        echo "Pasta do SDK não encontrada: $SDK_ROOT"
+    fi
+    
+    # Remove arquivo de repositórios se existir
+    if [ -f "$REPOSITORIES_FILE" ]; then
+        read -p "Deseja remover o arquivo de repositórios ($REPOSITORIES_FILE)? [s/N]: " confirm_repo < /dev/tty
+        if [[ "$confirm_repo" =~ ^[Ss]$ ]]; then
+            rm -f "$REPOSITORIES_FILE"
+            echo "Arquivo de repositórios removido: $REPOSITORIES_FILE"
+        else
+            echo "Arquivo de repositórios mantido: $REPOSITORIES_FILE"
+        fi
+    fi
+    return 0
+}
+
+# Função principal
+main() {
+    check_installation_exists
+    confirm_uninstall
+    remove_bashrc_entries
+    remove_sdk_files
+
+    echo ""
+    echo "--------------------------------------------"
+    echo "   Desinstalação concluída com sucesso!      "
+    echo "--------------------------------------------"
+    echo ""
+    echo "Recomendações:"
+    echo "1. Recarregue seu terminal com:"
+    echo "   source ~/.bashrc"
+    echo "2. Verifique se todas as entradas foram removidas"
+    echo ""
+    echo "Obrigado por utilizar o Android SDK!"
+    echo "Suporte: souzalb@proton.me"
+}
+
+# Executa desinstalação
+main
