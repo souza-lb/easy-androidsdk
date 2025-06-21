@@ -118,7 +118,7 @@ avdmanager create avd \
 # habilita os botões de navegação e teclado
 sed -i \
 -e 's/^hw\.keyboard\s*=\s*no.*/hw.keyboard = yes/' \
-"$HOME/.config/android/avd/meu-avd.avd/config.ini"
+"$HOME/.config/.android/avd/meu-avd.avd/config.ini"
 
 # Inicia o emulador com otimizações de desempenho
 emulator -avd \
