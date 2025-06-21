@@ -242,11 +242,10 @@ install_components() {
     local current=1
     
     # Cabeçalho informativo
-    printf "%-40s %s\n" "Componente" "Progresso"
+    printf "%-40s %s\n" "Progresso Total" "Componente"
     echo "------------------------------------------------------------"
     
     for component in "${COMPONENTS[@]}"; do
-        # Mostra o nome completo do componente e a barra na linha seguinte
         printf "%-40s " "$component"
         show_progress $current $total "$component"
         
